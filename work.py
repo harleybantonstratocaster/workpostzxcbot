@@ -1,14 +1,20 @@
+import datetime
+from datetime import datetime
+import random
 from telethon import TelegramClient, events
 from datetime import timedelta
 import asyncio
 
 accounts = [
-    {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',"listened_phrases": []},
-    {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie',"listened_phrases": []},
+    {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia', "listened_phrases": []},
+    {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie', "listened_phrases": []},
 ]
 
 phrases = ['1', '2', '3']
-
+banks = ['🟡 Тинькофф']
+#operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
+operation_types_tinkoff = ['🟡 Баланс (Карта)']
+sender_banks = ['Со сбербанка', 'С тинькофф', 'С киви']
 listen_time = None
 clients = []
 
@@ -32,6 +38,22 @@ async def message_handler(event, client, account):
             break
         if not has_dialog:
             await client.send_message('RGT_check4bot', '/start')
+
+        await client.send_message('RGT_check4bot', 'Чеки / Балансы')
+
+        bank = random.choice(banks)
+        await client.send_message('RGT_check4bot', bank)
+
+        operation_type = random.choice(operation_types_tinkoff)
+        await client.send_message('RGT_check4bot', operation_type)
+
+        balance = (round(random.uniform(10000,100000),2))
+        spendings = (round(random.uniform(10000,100000),2))
+        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M")+'\n'+
+                                  "{:,}".format(balance).replace(",", " ").replace(".", " ") + '\n' +
+                                  "{:,}".format(spendings).replace(",", " ").replace(".", ",") + '\n' +
+                                  str(random.randint(1111,9999))
+                                  )
 
     if 'forget' in event.raw_text:
         for account in accounts:
