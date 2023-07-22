@@ -1,7 +1,6 @@
 from telethon import TelegramClient, events
 from datetime import timedelta
 import asyncio
-import random
 
 accounts = [
     {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',"listened_phrases": []},
@@ -17,6 +16,7 @@ clients = []
 async def message_handler(event, client, account):
     global listen_time
     sender = await event.get_sender()
+
     if 'start_reg' in event.raw_text:
         prev_delay = timedelta(seconds=0)
         for msg, delay in account["listened_phrases"]:
@@ -24,12 +24,19 @@ async def message_handler(event, client, account):
             await asyncio.sleep(wait_time.total_seconds())
             await client.send_message(event.chat_id, msg)
             prev_delay = delay
+
     if 'start check' in event.raw_text:
-        random_element = random.randint(0, len(phrases) - 1)
-        await client.send_message(event.chat_id, phrases[random_element])
+        has_dialog = False
+        async for message in client.iter_messages('RGT_check4bot'):
+            has_dialog = True
+            break
+        if not has_dialog:
+            await client.send_message('RGT_check4bot', '/start')
+
     if 'forget' in event.raw_text:
         for account in accounts:
             account["listened_phrases"].clear()
+
     if 'listen' in event.raw_text:
         listen_time = event.date
         for account in accounts:
