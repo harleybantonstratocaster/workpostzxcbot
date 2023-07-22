@@ -6,17 +6,22 @@ from datetime import timedelta
 import asyncio
 
 accounts = [
-    {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia', "listened_phrases": []},
-    {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie', "listened_phrases": []},
+    {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',
+     "listened_phrases": []},
+    {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie',
+     "listened_phrases": []},
 ]
 
 phrases = ['1', '2', '3']
 banks = ['🟡 Тинькофф']
-#operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
-operation_types_tinkoff = ['🟡 Баланс (Карта)']
-sender_banks = ['Со сбербанка', 'С тинькофф', 'С киви']
+operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
+sender_banks = ['🟡 Со сбербанка', '🟡 С тинькофф', '🟡 С киви']
 listen_time = None
 clients = []
+
+
+def format_number(number):
+    return "{:,}".format(number).replace(",", " ").replace(".", ",")
 
 
 async def message_handler(event, client, account):
@@ -44,16 +49,51 @@ async def message_handler(event, client, account):
         bank = random.choice(banks)
         await client.send_message('RGT_check4bot', bank)
 
-        operation_type = random.choice(operation_types_tinkoff)
-        await client.send_message('RGT_check4bot', operation_type)
+        match bank:
+            case '🟡 Тинькофф':
+                operation_type = random.choice(operation_types_tinkoff)
+                await client.send_message('RGT_check4bot', operation_type)
 
-        balance = (round(random.uniform(10000,100000),2))
-        spendings = (round(random.uniform(10000,100000),2))
-        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M")+'\n'+
-                                  "{:,}".format(balance).replace(",", " ").replace(".", " ") + '\n' +
-                                  "{:,}".format(spendings).replace(",", " ").replace(".", ",") + '\n' +
-                                  str(random.randint(1111,9999))
-                                  )
+                match operation_type:
+                    case '🟡 Баланс (Карта)':
+
+                        balance = (round(random.uniform(10000, 100000), 2))
+                        spendings = (round(random.uniform(10000, 100000), 2))
+                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                                  "{:,}".format(balance).replace(",", " ").replace(".", ",") + '\n' +
+                                                  "{:,}".format(spendings).replace(",", " ").replace(".", ",") + '\n' +
+                                                  str(random.randint(1111, 9999))
+                                                  )
+                    case '🟡 Баланс (Главная)':
+
+                        balance = (round(random.uniform(10000, 100000), 2))
+                        spendings = (round(random.uniform(10000, 100000), 2))
+                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                                  account["name"] + '\n' +
+                                                  "{:,}".format(balance).replace(",", " ").replace(".", ",") + '\n' +
+                                                  "{:,}".format(spendings).replace(",", " ").replace(".", ",") + '\n' +
+                                                  str(random.randint(1111, 9999))
+                                                  )
+                    case '🟡 Получение':
+                        sender_bank = random.choice(sender_banks)
+                        await client.send_message('RGT_check4bot', sender_bank)
+
+                        match sender_bank:
+                            case '🟡 С киви':
+                                summ = (round(random.uniform(10000, 100000), 2))
+                                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                                          "{:,}".format(summ).replace(",", " ").replace(".",
+                                                                                                        ",") + '\n' +
+                                                          datetime.now().strftime("%d %m %y, %H:%M")
+                                                          )
+                            case _:
+                                summ = (round(random.uniform(10000, 100000), 2))
+                                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                                          "{:,}".format(summ).replace(",", " ").replace(".",
+                                                                                                        ",") + '\n' +
+                                                          datetime.now().strftime("%d %m %y, %H:%M") + '\n' +
+                                                          account["name"]
+                                                          )
 
     if 'forget' in event.raw_text:
         for account in accounts:
