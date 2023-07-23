@@ -7,13 +7,13 @@ import asyncio
 
 accounts = [
     {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',
-     "listened_phrases": []},
+     "listened_phrases": [], "chat_id": -813873054},
     {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie',
-     "listened_phrases": []},
+     "listened_phrases": [], "chat_id": -813873054},
 ]
 
 phrases = ['1', '2', '3']
-banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк','🥝 КИВИ']
+banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк', '🥝 КИВИ']
 operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
 sender_banks = ['🟡 Со сбербанка', '🟡 С тинькофф', '🟡 С киви']
 operation_types_sber = ['🟢 Баланс (Главная)', '🟢 Баланс (Карта)']
@@ -30,13 +30,14 @@ def format_number(number):
 async def message_handler(event, client, account):
     global listen_time
     sender = await event.get_sender()
+    chat = await event.get_chat()
 
     if 'start_reg' in event.raw_text:
         prev_delay = timedelta(seconds=0)
         for msg, delay in account["listened_phrases"]:
             wait_time = delay - prev_delay
             await asyncio.sleep(wait_time.total_seconds())
-            await client.send_message(event.chat_id, msg)
+            await client.send_message(account["chat_id"], msg)
             prev_delay = delay
 
     if 'start check' in event.raw_text:
@@ -134,6 +135,9 @@ async def message_handler(event, client, account):
                 await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
                                           format_number(balance)
                                           )
+    if sender.username == 'RGT_check4bot':
+        if event.message.photo and not event.message.text:
+            await client.send_message(account["chat_id"], event.message)
 
     if 'forget' in event.raw_text:
         for account in accounts:
