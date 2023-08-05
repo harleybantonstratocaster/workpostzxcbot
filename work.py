@@ -1,6 +1,6 @@
 import datetime
-from datetime import datetime
 import random
+from datetime import datetime
 from telethon import TelegramClient, events
 from datetime import timedelta
 import asyncio
@@ -21,6 +21,7 @@ operation_types_alfa = ['🅰️ Карты (Баланс)', '🅰️ Главн
 
 listen_time = None
 clients = []
+queue = []
 
 
 def format_number(number):
@@ -32,13 +33,31 @@ async def message_handler(event, client, account):
     sender = await event.get_sender()
     chat = await event.get_chat()
 
-    if 'start_reg' in event.raw_text:
+    if 'start reg' in event.raw_text:
         prev_delay = timedelta(seconds=0)
         for msg, delay in account["listened_phrases"]:
             wait_time = delay - prev_delay
             await asyncio.sleep(wait_time.total_seconds())
             await client.send_message(account["chat_id"], msg)
             prev_delay = delay
+
+    if 'listen' in event.raw_text:
+        listen_time = event.date
+        for account in accounts:
+            account["listened_phrases"].clear()
+    print(event.raw_text)
+    name = None
+    rest_of_message = None
+    if ' ' in event.raw_text:
+        name, *rest_of_message = event.raw_text.split()
+    if name.lower() == account["name"].lower():
+        if listen_time:
+            message_time = event.date
+            difference = message_time - listen_time
+            rest_of_message_str = ' '.join(rest_of_message)
+            account["listened_phrases"].append((rest_of_message_str, difference))
+
+
 
     if 'start check' in event.raw_text:
         has_dialog = False
@@ -142,16 +161,6 @@ async def message_handler(event, client, account):
     if 'forget' in event.raw_text:
         for account in accounts:
             account["listened_phrases"].clear()
-
-    if 'listen' in event.raw_text:
-        listen_time = event.date
-        for account in accounts:
-            account["listened_phrases"].clear()
-    if sender.first_name == account["name"]:
-        if listen_time:
-            message_time = event.date
-            difference = message_time - listen_time
-            account["listened_phrases"].append((event.raw_text, difference))
 
 
 def bind_event_handler(client, account):
