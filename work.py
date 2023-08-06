@@ -68,7 +68,7 @@ async def message_handler(event, client, account):
                     rest_of_message_str = rest_of_message_str.replace('(чек>70) ', '')
                     needs_check = True
                     bal = '>70'
-                delay = timedelta(seconds=random.uniform(10, 60))
+                delay = timedelta(seconds=random.uniform(700, 3600))
                 listened_phrases.append((rest_of_message_str, name, delay + prev_delay, needs_check,bal))
                 print(listened_phrases)
                 prev_delay += delay
