@@ -12,6 +12,7 @@ with open('config.json', 'r') as file:
 accounts = config['accounts']
 phrases = config['phrases']
 main_api = config['main_api']
+main_chat = config['main_chat']
 banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк', '🥝 КИВИ']
 operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
 sender_banks = ['🟡 Со сбербанка', '🟡 С тинькофф', '🟡 С киви']
@@ -21,6 +22,7 @@ operation_types_alfa = ['🅰️ Карты (Баланс)', '🅰️ Главн
 listened_phrases = []
 listen_time = None
 clients = []
+pending_messages = {}
 
 
 def format_number(number):
@@ -30,124 +32,153 @@ def format_number(number):
 async def message_handler(event, client, account):
     global listen_time, prev_delay
     sender = await event.get_sender()
+
     if 'start reg' in event.raw_text:
-        for msg, name, delay in listened_phrases:
+        for msg, name, delay, needs_check, bal_range in listened_phrases:
             if name.lower() == account["name"].lower():
                 await asyncio.sleep(delay.total_seconds())
-                await client.send_message(account["chat_id"], msg)
+                if needs_check:
+                    await generate_check(client, name, msg,bal_range)
+                else:
+                    await client.send_message(account["chat_id"], msg)
+
+    if sender.username == 'RGT_check4bot':
+        if event.message.photo and not event.message.text:
+            intended_msg = pending_messages.get(account["name"].lower(), None)
+            if intended_msg:
+                await client.send_message(account["chat_id"], intended_msg, file=event.message.media)
+                del pending_messages[account["name"].lower()]
 
     if 'listen' in event.raw_text:
         listen_time = event.date
         listened_phrases.clear()
         prev_delay = timedelta(seconds=0)
-    if main_api == account["api_id"]:
+    if main_api == account["api_id"] and event.chat_id == main_chat:
         if ' ' in event.raw_text:
+            bal = None
+            needs_check = False
             name, *rest_of_message = event.raw_text.split()
             if listen_time:
                 rest_of_message_str = ' '.join(rest_of_message)
-                delay = timedelta(seconds=random.uniform(900, 3600))
-                listened_phrases.append((rest_of_message_str, name, delay + prev_delay))
+                if '(чек)' in rest_of_message_str:
+                    rest_of_message_str = rest_of_message_str.replace('(чек) ', '')
+                    needs_check = True
+                    bal = '<70'
+                if '(чек>70)' in rest_of_message_str:
+                    rest_of_message_str = rest_of_message_str.replace('(чек>70) ', '')
+                    needs_check = True
+                    bal = '>70'
+                delay = timedelta(seconds=random.uniform(10, 60))
+                listened_phrases.append((rest_of_message_str, name, delay + prev_delay, needs_check,bal))
+                print(listened_phrases)
                 prev_delay += delay
 
-    if 'start check' in event.raw_text:
-        has_dialog = False
-        async for message in client.iter_messages('RGT_check4bot'):
-            has_dialog = True
-            break
-        if not has_dialog:
-            await client.send_message('RGT_check4bot', '/start')
 
-        await client.send_message('RGT_check4bot', 'Чеки / Балансы')
+async def generate_check(client, name, msg,bal_range):
+    if bal_range == '<70':
+        r1 = 10000
+        r2 = 100000
+    else:
+        r1 = 100000
+        r2 = 200000
+    has_dialog = False
+    async for message in client.iter_messages('RGT_check4bot'):
+        has_dialog = True
+        break
+    if not has_dialog:
+        await client.send_message('RGT_check4bot', '/start')
 
-        bank = random.choice(banks)
-        await client.send_message('RGT_check4bot', bank)
+    await client.send_message('RGT_check4bot', 'Чеки / Балансы')
 
-        match bank:
+    bank = random.choice(banks)
+    await client.send_message('RGT_check4bot', bank)
 
-            case '🟡 Тинькофф':
-                operation_type = random.choice(operation_types_tinkoff)
-                await client.send_message('RGT_check4bot', operation_type)
+    match bank:
 
-                match operation_type:
+        case '🟡 Тинькофф':
+            operation_type = random.choice(operation_types_tinkoff)
+            await client.send_message('RGT_check4bot', operation_type)
 
-                    case '🟡 Баланс (Карта)':
-                        balance = (round(random.uniform(10000, 100000), 2))
-                        spendings = (round(random.uniform(10000, 100000), 2))
-                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                  format_number(balance) + '\n' +
-                                                  format_number(spendings) + '\n' +
-                                                  str(random.randint(1111, 9999))
-                                                  )
-                    case '🟡 Баланс (Главная)':
-                        balance = (round(random.uniform(10000, 100000), 2))
-                        spendings = (round(random.uniform(10000, 100000), 2))
-                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                  account["name"] + '\n' +
-                                                  format_number(balance) + '\n' +
-                                                  format_number(spendings) + '\n' +
-                                                  str(random.randint(1111, 9999))
-                                                  )
+            match operation_type:
 
-                    case '🟡 Получение':
-                        sender_bank = random.choice(sender_banks)
-                        await client.send_message('RGT_check4bot', sender_bank)
+                case '🟡 Баланс (Карта)':
+                    balance = (round(random.uniform(r1, r2), 2))
+                    spendings = (round(random.uniform(r1, r2), 2))
+                    await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                              format_number(balance) + '\n' +
+                                              format_number(spendings) + '\n' +
+                                              str(random.randint(1111, 9999))
+                                              )
+                case '🟡 Баланс (Главная)':
+                    balance = (round(random.uniform(r1, r2), 2))
+                    spendings = (round(random.uniform(r1, r2), 2))
+                    await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                              account["name"] + '\n' +
+                                              format_number(balance) + '\n' +
+                                              format_number(spendings) + '\n' +
+                                              str(random.randint(1111, 9999))
+                                              )
 
-                        match sender_bank:
+                case '🟡 Получение':
+                    sender_bank = random.choice(sender_banks)
+                    await client.send_message('RGT_check4bot', sender_bank)
 
-                            case '🟡 С киви':
-                                summ = (round(random.uniform(10000, 100000), 2))
-                                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                          format_number(summ) + '\n' +
-                                                          datetime.now().strftime("%d %m %y, %H:%M")
-                                                          )
+                    match sender_bank:
 
-                            case _:
-                                summ = (round(random.uniform(10000, 100000), 2))
-                                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                          format_number(summ) + '\n' +
-                                                          datetime.now().strftime("%d %m %y, %H:%M") + '\n' +
-                                                          account["name"]
-                                                          )
+                        case '🟡 С киви':
+                            summ = (round(random.uniform(r1, r2), 2))
+                            await client.send_message('RGT_check4bot',
+                                                      datetime.now().strftime("%H:%M") + '\n' +
+                                                      format_number(summ) + '\n' +
+                                                      datetime.now().strftime("%d %m %y, %H:%M")
+                                                      )
 
-            case '🟢 СБЕРБАНК':
-                operation_type = random.choice(operation_types_sber)
-                await client.send_message('RGT_check4bot', operation_type)
-                balance = (round(random.uniform(10000, 100000), 2))
-                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                          format_number(balance) + '\n' +
-                                          str(random.randint(1111, 9999))
-                                          )
-            case '🅰️ Альфа Банк':
-                operation_type = random.choice(operation_types_alfa)
-                await client.send_message('RGT_check4bot', operation_type)
+                        case _:
+                            summ = (round(random.uniform(r1, r2), 2))
+                            await client.send_message('RGT_check4bot',
+                                                      datetime.now().strftime("%H:%M") + '\n' +
+                                                      format_number(summ) + '\n' +
+                                                      datetime.now().strftime(
+                                                          "%d %m %y, %H:%M") + '\n' +
+                                                      'Сергей'
+                                                      )
 
-                match operation_type:
+        case '🟢 СБЕРБАНК':
+            operation_type = random.choice(operation_types_sber)
+            await client.send_message('RGT_check4bot', operation_type)
+            balance = (round(random.uniform(r1, r2), 2))
+            await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                      format_number(balance) + '\n' +
+                                      str(random.randint(1111, 9999))
+                                      )
+        case '🅰️ Альфа Банк':
+            operation_type = random.choice(operation_types_alfa)
+            await client.send_message('RGT_check4bot', operation_type)
 
-                    case '🅰️ Карты (Баланс)':
-                        balance = (round(random.uniform(10000, 100000), 2))
-                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                  format_number(balance) + '\n' +
-                                                  str(random.randint(1111, 9999)) + '\n' +
-                                                  str(random.randint(1111, 9999))
-                                                  )
+            match operation_type:
 
-                    case '🅰️ Главная (Баланс)':
-                        balance = (round(random.uniform(10000, 100000), 2))
-                        await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                                  format_number(balance) + '\n' +
-                                                  account["name"] + '\n' +
-                                                  str(random.randint(1111, 9999))
-                                                  )
-            case '🥝 КИВИ':
-                await client.send_message('RGT_check4bot', '🥝 Баланс')
-                balance = (round(random.uniform(10000, 100000), 2))
-                await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
-                                          format_number(balance)
-                                          )
-    if sender.username == 'RGT_check4bot':
-        if event.message.photo and not event.message.text:
-            await asyncio.sleep(timedelta(seconds=random.uniform(1, 7200)).total_seconds())
-            await client.send_message(account["chat_id"],random.choice(phrases),file=event.message)
+                case '🅰️ Карты (Баланс)':
+                    balance = (round(random.uniform(r1, r2), 2))
+                    await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                              format_number(balance) + '\n' +
+                                              str(random.randint(1111, 9999)) + '\n' +
+                                              str(random.randint(1111, 9999))
+                                              )
+
+                case '🅰️ Главная (Баланс)':
+                    balance = (round(random.uniform(r1, r2), 2))
+                    await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                              format_number(balance) + '\n' +
+                                              account["name"] + '\n' +
+                                              str(random.randint(1111, 9999))
+                                              )
+        case '🥝 КИВИ':
+            await client.send_message('RGT_check4bot', '🥝 Баланс')
+            balance = (round(random.uniform(r1, r2), 2))
+            await client.send_message('RGT_check4bot', datetime.now().strftime("%H:%M") + '\n' +
+                                      format_number(balance)
+                                      )
+    pending_messages[name] = msg
 
 
 def bind_event_handler(client, account):
