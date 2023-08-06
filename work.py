@@ -151,9 +151,7 @@ async def message_handler(event, client, account):
         if event.message.photo and not event.message.text:
             await client.send_message(account["chat_id"], event.message)
 
-    if 'forget' in event.raw_text:
-        for account in accounts:
-            account["listened_phrases"].clear()
+
 
 
 def bind_event_handler(client, account):
