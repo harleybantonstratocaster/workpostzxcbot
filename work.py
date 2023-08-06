@@ -7,10 +7,11 @@ import asyncio
 
 accounts = [
     {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',
-     "listened_phrases": [], "chat_id": -813873054},
+     "chat_id": -813873054},
     {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie',
-     "listened_phrases": [], "chat_id": -813873054},
+     "chat_id": -813873054},
 ]
+main_api = 28300645
 
 phrases = ['1', '2', '3']
 banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк', '🥝 КИВИ']
@@ -19,9 +20,9 @@ sender_banks = ['🟡 Со сбербанка', '🟡 С тинькофф', '�
 operation_types_sber = ['🟢 Баланс (Главная)', '🟢 Баланс (Карта)']
 operation_types_alfa = ['🅰️ Карты (Баланс)', '🅰️ Главная (Баланс)']
 
+listened_phrases = []
 listen_time = None
 clients = []
-queue = []
 
 
 def format_number(number):
@@ -29,35 +30,27 @@ def format_number(number):
 
 
 async def message_handler(event, client, account):
-    global listen_time
+    global listen_time, prev_delay
     sender = await event.get_sender()
-    chat = await event.get_chat()
-
     if 'start reg' in event.raw_text:
-        prev_delay = timedelta(seconds=0)
-        for msg, delay in account["listened_phrases"]:
-            wait_time = delay - prev_delay
-            await asyncio.sleep(wait_time.total_seconds())
-            await client.send_message(account["chat_id"], msg)
-            prev_delay = delay
+        for msg, name, delay in listened_phrases:
+            if name.lower() == account["name"].lower():
+                await asyncio.sleep(delay.total_seconds())
+                await client.send_message(account["chat_id"], msg)
 
     if 'listen' in event.raw_text:
         listen_time = event.date
-        for account in accounts:
-            account["listened_phrases"].clear()
-    print(event.raw_text)
-    name = None
-    rest_of_message = None
-    if ' ' in event.raw_text:
-        name, *rest_of_message = event.raw_text.split()
-    if name.lower() == account["name"].lower():
-        if listen_time:
-            message_time = event.date
-            difference = message_time - listen_time
-            rest_of_message_str = ' '.join(rest_of_message)
-            account["listened_phrases"].append((rest_of_message_str, difference))
-
-
+        listened_phrases.clear()
+        prev_delay = timedelta(seconds=0)
+    if main_api == account["api_id"]:
+        if ' ' in event.raw_text:
+            name, *rest_of_message = event.raw_text.split()
+            if listen_time:
+                rest_of_message_str = ' '.join(rest_of_message)
+                delay = timedelta(seconds=random.uniform(1, 30))
+                listened_phrases.append((rest_of_message_str, name, delay + prev_delay))
+                print(listened_phrases)
+                prev_delay += delay
 
     if 'start check' in event.raw_text:
         has_dialog = False
