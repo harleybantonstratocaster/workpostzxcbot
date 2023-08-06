@@ -4,16 +4,14 @@ from datetime import datetime
 from telethon import TelegramClient, events
 from datetime import timedelta
 import asyncio
+import json
 
-accounts = [
-    {"api_id": 28300645, "api_hash": '5f25371da2bf53707fdad2cbf4321d44', "session": 'work1', "name": 'Sophia',
-     "chat_id": -813873054},
-    {"api_id": 25842680, "api_hash": 'c9b5f4e951ca79f2c061cf9842c95902', "session": 'work2', "name": 'Natalie',
-     "chat_id": -813873054},
-]
-main_api = 28300645
+with open('config.json', 'r') as file:
+    config = json.load(file)
 
-phrases = ['1', '2', '3']
+accounts = config['accounts']
+phrases = config['phrases']
+main_api = config['main_api']
 banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк', '🥝 КИВИ']
 operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
 sender_banks = ['🟡 Со сбербанка', '🟡 С тинькофф', '🟡 С киви']
@@ -47,9 +45,8 @@ async def message_handler(event, client, account):
             name, *rest_of_message = event.raw_text.split()
             if listen_time:
                 rest_of_message_str = ' '.join(rest_of_message)
-                delay = timedelta(seconds=random.uniform(1, 30))
+                delay = timedelta(seconds=random.uniform(900, 3600))
                 listened_phrases.append((rest_of_message_str, name, delay + prev_delay))
-                print(listened_phrases)
                 prev_delay += delay
 
     if 'start check' in event.raw_text:
@@ -149,9 +146,8 @@ async def message_handler(event, client, account):
                                           )
     if sender.username == 'RGT_check4bot':
         if event.message.photo and not event.message.text:
-            await client.send_message(account["chat_id"], event.message)
-
-
+            await asyncio.sleep(timedelta(seconds=random.uniform(1, 7200)).total_seconds())
+            await client.send_message(account["chat_id"],random.choice(phrases),file=event.message)
 
 
 def bind_event_handler(client, account):
