@@ -35,8 +35,8 @@ async def message_handler(event, client, account):
 
     if 'start reg' in event.raw_text:
         for msg, name, delay, needs_check, bal_range in listened_phrases:
+            await asyncio.sleep(delay.total_seconds())
             if name.lower() == account["name"].lower():
-                await asyncio.sleep(delay.total_seconds())
                 if needs_check:
                     await generate_check(client, name, msg,bal_range)
                 else:
@@ -52,7 +52,6 @@ async def message_handler(event, client, account):
     if 'listen' in event.raw_text:
         listen_time = event.date
         listened_phrases.clear()
-        prev_delay = timedelta(seconds=0)
     if main_api == account["api_id"] and event.chat_id == main_chat:
         if ' ' in event.raw_text:
             bal = None
@@ -68,10 +67,9 @@ async def message_handler(event, client, account):
                     rest_of_message_str = rest_of_message_str.replace('(чек>70) ', '')
                     needs_check = True
                     bal = '>70'
-                delay = timedelta(seconds=random.uniform(700, 3600))
-                listened_phrases.append((rest_of_message_str, name, delay + prev_delay, needs_check,bal))
+                delay = timedelta(seconds=random.uniform(10, 60))
+                listened_phrases.append((rest_of_message_str, name, delay, needs_check,bal))
                 print(listened_phrases)
-                prev_delay += delay
 
 
 async def generate_check(client, name, msg,bal_range):
