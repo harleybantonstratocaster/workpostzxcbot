@@ -1,21 +1,20 @@
 {
     "accounts": [
         {
-            "api_id": 28300645,
-            "api_hash": "5f25371da2bf53707fdad2cbf4321d44",
             "session": "work1",
             "name": "Sophia",
-            "chat_id": -813873054
+            "chat_id_1": -813873054,
+            "chat_id_2": 6242552571
         },
         {
-            "api_id": 25842680,
-            "api_hash": "c9b5f4e951ca79f2c061cf9842c95902",
             "session": "work2",
             "name": "Natalie",
-            "chat_id": -813873054
+            "chat_id_1": -813873054,
+            "chat_id_2": 6242552571
         }
     ],
-    "phrases": ["1", "2", "3"],
-    "main_api": 28300645,
-    "main_chat": -813873054
+    "main_session": "work1",
+    "main_chat": -813873054,
+    "api_id": 28300645,
+    "api_hash": "5f25371da2bf53707fdad2cbf4321d44"
 }

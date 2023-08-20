@@ -9,9 +9,10 @@ import json
 with open('config.json', 'r') as file:
     config = json.load(file)
 
+api_id = config['api_id']
+api_hash = config['api_hash']
 accounts = config['accounts']
-phrases = config['phrases']
-main_api = config['main_api']
+main_session = config['main_session']
 main_chat = config['main_chat']
 banks = ['🟡 Тинькофф', '🟢 СБЕРБАНК', '🅰️ Альфа Банк', '🥝 КИВИ']
 operation_types_tinkoff = ['🟡 Баланс (Главная)', '🟡 Баланс (Карта)', '🟡 Получение']
@@ -40,19 +41,21 @@ async def message_handler(event, client, account):
                 if needs_check:
                     await generate_check(client, name, msg,bal_range)
                 else:
-                    await client.send_message(account["chat_id"], msg)
+                    await client.send_message(account["chat_id_1"], msg)
+                    await client.send_message(account["chat_id_2"], msg)
 
     if sender.username == 'RGT_check4bot':
         if event.message.photo and not event.message.text:
             intended_msg = pending_messages.get(account["name"].lower(), None)
             if intended_msg:
-                await client.send_message(account["chat_id"], intended_msg, file=event.message.media)
+                await client.send_message(account["chat_id_1"], intended_msg, file=event.message.media)
+                await client.send_message(account["chat_id_2"], intended_msg, file=event.message.media)
                 del pending_messages[account["name"].lower()]
 
     if 'listen' in event.raw_text:
         listen_time = event.date
         listened_phrases.clear()
-    if main_api == account["api_id"] and event.chat_id == main_chat:
+    if main_session == account["session"] and event.chat_id == main_chat:
         if ' ' in event.raw_text:
             bal = None
             needs_check = False
@@ -60,7 +63,7 @@ async def message_handler(event, client, account):
             if listen_time:
                 rest_of_message_str = ' '.join(rest_of_message)
                 if '(чек)' in rest_of_message_str:
-                    rest_of_message_str = rest_of_message_str.replace('(чек) ', '')
+                    rest_of_message_str = rest_of_message_str.replace('(чек)', '')
                     needs_check = True
                     bal = '<70'
                 if '(чек>70)' in rest_of_message_str:
@@ -184,7 +187,7 @@ def bind_event_handler(client, account):
 
 
 for account in accounts:
-    client = TelegramClient(account['session'], account['api_id'], account['api_hash'])
+    client = TelegramClient(account['session'], api_id, api_hash)
     bind_event_handler(client, account)
     clients.append(client)
 
